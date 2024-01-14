@@ -190,17 +190,13 @@ def prepplike3(*args):
 def plike3(idx, lenghts, *args):
     l = len(lenghts)
     rv = np.empty((l,), dtype=args[0].dtype)
-    print(idx)
-    idx = int(idx)
-    print(idx)
+    index = numba.int64(idx)  # required to unify prange and range
     for i in range(l-1):
-        div = int(idx // lenghts[i+1])
-        rem = int(idx % lenghts[i+1])
-        # rv[i] = args[i][div]
-        tmp = args[i]
-        rv[i] = tmp[div]
-        idx = int(rem)
-    rv[int(i+1)] = args[int(i+1)][int(idx)]
+        div = index // lenghts[i+1]
+        rem = index % lenghts[i+1]
+        rv[i] = args[i][div]
+        index = rem
+    rv[i+1] = args[i+1][index]
     return rv
 
 
@@ -270,23 +266,23 @@ def tontosum3(*args):
     return rv
 
 
-@numba.njit#(parallel=True)
+@numba.njit(parallel=True)
 def tontosum4(*args):
     prep = prepplike3(*args)
     rv = 0.
     total = 1
     for a in args:
         total *= len(a)
-    for i in numba.prange(total):
-        x = plike3(int(i), prep, *args)
+    for ii in numba.prange(total):
+        x = plike3(ii, prep, *args)
         rv += x[0] * x[1] * x[2]
     return rv
 
 
 if __name__ == '__main__':
-    a = np.arange(1., 200, 1)
+    a = np.arange(1., 20, .1)
     b = np.arange(6., 180, 1)
-    c = np.arange(6., 79, .75)
+    c = np.arange(.06, 18, .2)
     # rv1 = [list(p) for p in itertools.product(a, b, c)]
     # rv2 = [p for p in product_like(a, b, c)]
     # print(all((np.all(r1 == r2) for r1, r2 in zip(rv1, rv2))))
@@ -322,6 +318,7 @@ if __name__ == '__main__':
     v9 = tontotal(a, b, c)
     tf = time.time()
     print(tf-t0)
+    print(v0,v1,v2,v3,v4,v9)
     # snapshot2 = tracemalloc.take_snapshot()
     # top_stats = snapshot2.compare_to(snapshot1, 'lineno')
 
